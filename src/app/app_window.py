@@ -1,7 +1,8 @@
 import customtkinter as ctk
-
-from ui.views.main_view import MainView
-from ui.views.loading_view import LoadingView
+from app.ui.views.main_view import MainView
+from app.ui.views.loading_view import LoadingView
+from app.ui.views.request_view import RequestView
+from .controller import AppController
 
 class AppWindow(ctk.CTk):
     """
@@ -13,9 +14,14 @@ class AppWindow(ctk.CTk):
         self.geometry("800x600")
         self.resizable(False, False)
 
+        # コントローラーの作成
+        self.controller = AppController(self)
+
         # メインビューを表示
-        self.main_view = MainView(self)
+        self.main_view = MainView(
+            master=self,
+        )
         self.main_view.pack(fill="both", expand=True)
 
-        # 初期画面として、ローディングビューを表示
-        self.main_view.show_view(LoadingView)
+        # 初期画面として、リクエストビューを表示
+        self.controller.show_view(RequestView)

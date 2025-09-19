@@ -22,7 +22,7 @@ arXivからキーワード・日付範囲で論文を収集し、Notionに保存
 - 日付範囲
 - NotionのDB：テキストボックス or ドロップダウンメニュー。
 - 論文の表示：それぞれの論文のタイトル、日時、abstractを表示。左側にチェックボックスを配置。
-- 調査中：読み込み中の表示。
+- 読み込み中：読み込み中の表示。
 
 ## 3. データモデル
 ```python
@@ -36,13 +36,20 @@ class Paper(BaseModel):
     abstract_ja: str
 ```
 
-## 4. フォルダ構成
+## 4. アーキテクチャ
+### MVCパターンに準拠
+- **Model**: `src/domain/models.py` データ構造定義
+- **View**: `src/app/ui/views/` 画面レイアウト
+- **Controller**: `src/app/controller.py` アプリケーションロジック
+
+## 5. フォルダ構成
 ```
 paper-to-notion/
 ├── src/
 │   ├── app/                  # アプリケーション層
 │   │   ├── main.py           # エントリポイント
-│   │   └── app_window.py     # メインウィンドウ管理
+│   │   ├── app_window.py     # メインウィンドウ管理
+│   │   └── controller.py     # アプリケーションロジック
 │   ├── ui/                   # GUIコンポーネント層 (新規追加)
 │   │   ├── components/       # 再利用可能コンポーネン
 │   │   │   ├── header.py
@@ -70,4 +77,8 @@ paper-to-notion/
 ├── .gitignore
 ├── README.md
 └── requirements.txt
-```
+
+## 起動方法
+
+```bash
+uvicorn run python src/main.py
