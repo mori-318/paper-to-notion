@@ -1,7 +1,10 @@
 from __future__ import annotations
-from typing import Optional, Type, Callable, Union
+from typing import Optional, Type, Callable, Union, List
+import threading
 import customtkinter as ctk
+
 from domain.models import SearchConfig
+from services.arxiv_service import ArxivService
 
 class AppController:
     """
@@ -53,13 +56,90 @@ class AppController:
 
         Args:
             config (Optional[SearchConfig]): 検索設定
-        TODO: 現在は、ローディング画面へ遷移するのみ
         """
-        # TODO: 検索実行ロジックの実装
-        # 実行開始時は、キャンセルフラグを立てる
         from app.ui.views.loading_view import LoadingView  # 遅延インポート
         self._is_cancelling = False
+        # ローディング表示
         self.show_view(LoadingView)
+
+        if config is None:
+            return
+
+        # バックグラウンドで検索を実行
+        t = threading.Thread(target=self._run_search, args=(config,), daemon=True)
+        t.start()
+
+    def _run_search(self, config: SearchConfig):
+        """
+        別スレッドで arXiv 検索を実行し、完了後に結果ビューを表示する。
+        Args:
+            config (SearchConfig): 検索設定
+        """
+        # サービス呼び出し
+        try:
+            service = ArxivService()
+            papers = service.search_papers(
+                keywords=config.keyword,
+                max_results=config.max_results,
+                start_date=config.start_date,
+                end_date=config.end_date,
+            )
+        except Exception as e:
+            # エラー時はエラービューを表示
+            def error_view(parent: ctk.CTkFrame) -> ctk.CTkFrame:
+                frame = ctk.CTkFrame(parent)
+                ctk.CTkLabel(frame, text=f"検索中にエラーが発生しました: {e}").pack(pady=20)
+                ctk.CTkButton(frame, text="戻る", command=self.cancel_request).pack(pady=10)
+                return frame
+            self.window.after(0, lambda: self.show_view(error_view))
+            return
+
+        if self._is_cancelling:
+            return
+
+        # メインスレッドで結果表示
+        self.window.after(0, lambda: self.show_view(lambda parent: self._create_results_view(parent, papers)))
+
+    def _create_results_view(self, parent: ctk.CTkFrame, papers: List[object]) -> ctk.CTkFrame:
+        """
+        検索結果を表示する簡易ビューを生成する。
+        Args:
+            parent (ctk.CTkFrame): 親フレーム
+            papers (List[object]): 検索結果
+        Returns:
+            ctk.CTkFrame: 生成したビュー
+        """
+        frame = ctk.CTkFrame(parent)
+
+        # ヘッダー
+        header = ctk.CTkFrame(frame)
+        header.pack(fill="x", padx=10, pady=10)
+        ctk.CTkLabel(header, text="検索結果", font=ctk.CTkFont(size=18, weight="bold")).pack(side="left")
+        ctk.CTkButton(header, text="条件へ戻る", command=self.cancel_request).pack(side="right")
+
+        # リスト（スクロール）
+        list_area = ctk.CTkScrollableFrame(frame, height=400)
+        list_area.pack(fill="both", expand=True, padx=10, pady=10)
+
+        if not papers:
+            ctk.CTkLabel(list_area, text="該当する論文が見つかりませんでした。").pack(pady=20)
+            return frame
+
+        for p in papers:
+            item = ctk.CTkFrame(list_area)
+            item.pack(fill="x", padx=5, pady=6)
+            title = getattr(p, "title", "(no title)")
+            date = getattr(p, "published_date", "")
+            url = getattr(p, "url", "")
+            abstract = getattr(p, "abstract", "")
+
+            ctk.CTkLabel(item, text=title, font=ctk.CTkFont(size=14, weight="bold"), anchor="w").pack(fill="x")
+            ctk.CTkLabel(item, text=f"{date}  |  {url}", anchor="w").pack(fill="x")
+            # abstractは長いので先頭だけ
+            preview = abstract[:200] + ("..." if len(abstract) > 200 else "")
+            ctk.CTkLabel(item, text=preview, anchor="w", justify="left", wraplength=800).pack(fill="x")
+
+        return frame
 
     def cancel_request(self):
         """

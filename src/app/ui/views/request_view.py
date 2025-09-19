@@ -100,7 +100,7 @@ class RequestView(ctk.CTkFrame):
         self.submit_button = ctk.CTkButton(
             self,
             text="調査開始",
-            command=self._submit_request,
+            command=self.submit_request,
         )
         self.submit_button.pack(pady=10)
 
