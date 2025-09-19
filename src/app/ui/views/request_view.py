@@ -9,10 +9,6 @@ class RequestView(ctk.CTkFrame):
         super().__init__(master)
         self.controller = controller
 
-        # タイトルラベル
-        self.title_label = ctk.CTkLabel(self, text="論文調査リクエスト", font=ctk.CTkFont(size=20, weight="bold"))
-        self.title_label.pack(pady=20)
-
         # キーワード入力フィールド
         self.keyword_frame = ctk.CTkFrame(self)
         self.keyword_frame.pack(pady=10, fill="x")
@@ -108,14 +104,6 @@ class RequestView(ctk.CTkFrame):
         )
         self.submit_button.pack(pady=10)
 
-        # キャンセルボタン
-        self.cancel_button = ctk.CTkButton(
-            self,
-            text="キャンセル",
-            command=self.controller.cancel_request,
-        )
-        self.cancel_button.pack(pady=10)
-
     def _update_max_results_entry(self, value):
         """
         スライダーの値をテキストボックスに反映
@@ -134,7 +122,7 @@ class RequestView(ctk.CTkFrame):
         except ValueError:
             pass
 
-    def _submit_request(self):
+    def submit_request(self):
         """
         リクエストを送信
         """
@@ -157,4 +145,3 @@ class RequestView(ctk.CTkFrame):
 
         # コントローラーに設定を渡す
         self.controller.submit_request(config)
-        # 画面遷移はコントローラー側で実施するためここでは行わない

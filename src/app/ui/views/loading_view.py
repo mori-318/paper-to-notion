@@ -4,8 +4,9 @@ class LoadingView(ctk.CTkFrame):
     """
     論文調査中のビュー
     """
-    def __init__(self, master: ctk.CTkFrame, **kwargs):
+    def __init__(self, master: ctk.CTkFrame, controller=None, **kwargs):
         super().__init__(master, **kwargs)
+        self.controller = controller
 
         # ローディングメッセージ
         self.loading_label = ctk.CTkLabel(self, text="論文調査中...")
@@ -15,3 +16,14 @@ class LoadingView(ctk.CTkFrame):
         self.progressbar = ctk.CTkProgressBar(self, mode="indeterminate")
         self.progressbar.pack(pady=10)
         self.progressbar.start()
+
+        # キャンセルボタン（controller があれば有効化）
+        self.cancel_button = ctk.CTkButton(
+            self,
+            text="キャンセル",
+            command=(self.controller.cancel_request if self.controller else None),
+        )
+        # controller が無い場合は無効化
+        if self.controller is None:
+            self.cancel_button.configure(state="disabled")
+        self.cancel_button.pack(pady=10)

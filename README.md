@@ -45,40 +45,38 @@ class Paper(BaseModel):
 ## 5. フォルダ構成
 ```
 paper-to-notion/
+├── experiments/
+│   └── arXiv_api.ipynb
 ├── src/
 │   ├── app/                  # アプリケーション層
-│   │   ├── main.py           # エントリポイント
 │   │   ├── app_window.py     # メインウィンドウ管理
-│   │   └── controller.py     # アプリケーションロジック
-│   ├── ui/                   # GUIコンポーネント層 (新規追加)
-│   │   ├── components/       # 再利用可能コンポーネン
-│   │   │   ├── header.py
-│   │   │   ├── paper_list.py
-│   │   │   ├── search_bar.py
-│   │   │   └── ...
-│   │   └── views/            # 画面レイアウト
-│   │       ├── main_view.py
-│   │       ├── settings_view.py
-│   │       └── ...
+│   │   ├── controller.py     # アプリケーションロジック
+│   │   └── ui/               # GUIコンポーネント層
+│   │       ├── components/   # 再利用可能コンポーネント
+│   │       └── views/        # 画面レイアウト
+│   │           ├── main_view.py
+│   │           ├── loading_view.py
+│   │           └── request_view.py
+│   ├── colloctors/           # データ収集（ディレクトリ名は将来 "collectors" へ更名推奨）
+│   ├── config/
 │   ├── domain/               # ドメインモデル
+│   │   ├── __init__.py
+│   │   └── models.py
 │   ├── services/             # ビジネスロジック
-│   └── utils/                # 共通ユーティリティ
+│   ├── sinks/
+│   ├── utils/                # 共通ユーティリティ
+│   └── main.py               # エントリポイント
 ├── tests/
 │   ├── unit/
-│   │   ├── test_arxiv.py
-│   │   ├── test_notion.py
-│   │   └── test_utils.py
-│   └── integration/          # 統合テスト用
-├── config/                   # 設定ファイル
-│   └── keywords.yaml         # 保存されたキーワード
-├── data/                     # 生成データ
-│   └── papers.json           # 一時保存論文データ
-├── logs/                     # ログファイル（自動生成）
+│   └── integration/
 ├── .gitignore
+├── .python-version
 ├── README.md
-└── requirements.txt
+├── pyproject.toml            # 依存管理（uv/PEP 621）
+└── uv.lock
+```
 
 ## 起動方法
 
 ```bash
-uvicorn run python src/main.py
+uv run python src/main.py

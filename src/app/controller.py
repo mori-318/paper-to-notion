@@ -3,8 +3,6 @@ from typing import Optional, Type, Callable, Union
 import customtkinter as ctk
 from domain.models import SearchConfig
 
-# ビューは遅延インポートで使用（循環参照・起動時依存の回避）
-
 class AppController:
     """
     アプリケーションの制御ロジックを管理するクラス
@@ -36,12 +34,12 @@ class AppController:
         # インスタンス生成（controller 付き/なしの両方に対応）
         instance: Optional[ctk.CTkFrame] = None
         try:
-            # view が class or callable いずれでも、親フレームのみで一旦呼ぶ
-            instance = view(content)  # type: ignore[arg-type]
+            # まず controller を渡して試す（渡しても受理できるクラスでは有効にするため）
+            instance = view(content, controller=self)  # type: ignore[misc]
         except TypeError:
-            # controller を要求する場合はこちらで再試行
+            # controller を受け付けないコンストラクタの場合はフォールバック
             try:
-                instance = view(content, controller=self)  # type: ignore[misc]
+                instance = view(content)  # type: ignore[arg-type]
             except TypeError as e:
                 # それでもダメなら例外を再送出
                 raise e
