@@ -26,14 +26,14 @@ arXivからキーワード・日付範囲で論文を収集し、Notionに保存
 
 ## 3. データモデル
 ```python
-class Paper:
-    def __init__(self, title, url, authors, published_date, category, abstract):
-        self.title = title
-        self.url = url
-        self.authors = authors
-        self.published_date = published_date
-        self.category = category
-        self.abstract = abstract
+class Paper(BaseModel):
+    title: str
+    url: str
+    authors: List[str]
+    published_date: str
+    category: str
+    abstract: str
+    abstract_ja: str
 ```
 
 ## 4. フォルダ構成
@@ -41,16 +41,21 @@ class Paper:
 paper-to-notion/
 ├── src/
 │   ├── app/                  # アプリケーション層
-│   │   ├── gui.py            # GUIメイン
-│   │   └── main.py           # エントリポイント
+│   │   ├── main.py           # エントリポイント
+│   │   └── app_window.py     # メインウィンドウ管理
+│   ├── ui/                   # GUIコンポーネント層 (新規追加)
+│   │   ├── components/       # 再利用可能コンポーネン
+│   │   │   ├── header.py
+│   │   │   ├── paper_list.py
+│   │   │   ├── search_bar.py
+│   │   │   └── ...
+│   │   └── views/            # 画面レイアウト
+│   │       ├── main_view.py
+│   │       ├── settings_view.py
+│   │       └── ...
 │   ├── domain/               # ドメインモデル
-│   │   └── models.py         # Paperクラスなど
 │   ├── services/             # ビジネスロジック
-│   │   ├── arxiv_service.py  # arXiv収集
-│   │   ├── notion_service.py # Notion連携
-│   │   └── translation.py    # 翻訳処理
 │   └── utils/                # 共通ユーティリティ
-│       └── helpers.py
 ├── tests/
 │   ├── unit/
 │   │   ├── test_arxiv.py
