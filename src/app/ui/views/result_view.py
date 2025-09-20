@@ -1,6 +1,7 @@
 import customtkinter as ctk
 from typing import List, Any
 import webbrowser
+from datetime import datetime
 
 class ResultView(ctk.CTkFrame):
     """
@@ -62,7 +63,8 @@ class ResultView(ctk.CTkFrame):
     def _create_paper_item(self, paper):
         """個々の論文アイテムを作成"""
         item_frame = ctk.CTkFrame(self.list_frame)
-        item_frame.pack(fill="x", padx=5, pady=6)
+        # 右側に余白を広めに取り、スクロールバーとの重なりを回避
+        item_frame.pack(fill="x", padx=(5, 18), pady=6)
 
         # 論文属性を取得
         title = getattr(paper, "title", "(no title)")
@@ -83,23 +85,59 @@ class ResultView(ctk.CTkFrame):
             text_color="#1a5fb4",
             command=lambda u=url: webbrowser.open(u) if u else None
         )
-        title_button.pack(fill="x")
+        # 右側に余白を追加
+        title_button.pack(fill="x", padx=(2, 6))
 
         # メタ情報
-        meta_label = ctk.CTkLabel(
-            item_frame,
-            text=f"{date}  |  {url}",
-            anchor="w"
-        )
-        meta_label.pack(fill="x")
+        formatted_date = ""
+        try:
+            if date:
+                ds = str(date)
+                if ds.endswith("Z"):
+                    ds = ds[:-1]
+                dt = None
+                try:
+                    dt = datetime.fromisoformat(ds)
+                except ValueError:
+                    for fmt in ("%Y-%m-%d", "%Y/%m/%d"):
+                        try:
+                            dt = datetime.strptime(ds, fmt)
+                            break
+                        except ValueError:
+                            continue
+                if dt:
+                    formatted_date = f"{dt.year}年{dt.month}月{dt.day}日"
+        except Exception:
+            formatted_date = str(date) if date else ""
 
-        # アブストラクトプレビュー
-        preview = abstract[:200] + ("..." if len(abstract) > 200 else "")
+        if formatted_date:
+            meta_label = ctk.CTkLabel(
+                item_frame,
+                text=formatted_date,
+                anchor="w"
+            )
+            # 右側に余白を追加
+            meta_label.pack(fill="x", padx=(2, 6))
+
+        # アブストラクト（全文表示）
         abstract_label = ctk.CTkLabel(
             item_frame,
-            text=preview,
+            text=abstract,
             anchor="w",
             justify="left",
-            wraplength=800
+            # 初期値は小さくして、後続の<Configure>で動的に更新
+            wraplength=100
         )
-        abstract_label.pack(fill="x")
+        # 右側に余白を追加
+        abstract_label.pack(fill="x", padx=(2, 6))
+
+        # フレームのサイズに合わせて折り返し幅を更新（スクロールバー幅分を差し引く）
+        def _update_wraplength(event=None, lbl=abstract_label, frame=item_frame):
+            try:
+                w = frame.winfo_width()
+                if w and w > 0:
+                    lbl.configure(wraplength=max(w - 10, 120))
+            except Exception:
+                pass
+
+        item_frame.bind("<Configure>", _update_wraplength)

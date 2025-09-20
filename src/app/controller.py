@@ -6,7 +6,7 @@ import logging
 
 from domain.models import SearchConfig
 from services.arxiv_service import ArxivService
-from services.translation_service import TranslationService
+from services.translation_service import TranslationService, TranslationCanceledException
 from app.ui.views.result_view import ResultView
 
 class AppController:
@@ -62,6 +62,7 @@ class AppController:
         """
         from app.ui.views.loading_view import LoadingView  # 遅延インポート
         self._is_cancelling = False
+
         # ローディング表示
         self.show_view(LoadingView)
 
@@ -92,6 +93,7 @@ class AppController:
             # 翻訳（バッチ処理）
             try:
                 translator = TranslationService()
+                translator.set_cancel_flag(lambda: self._is_cancelling)
 
                 # 全てのabstractをリストにまとめて翻訳
                 abstracts = [p.abstract for p in papers]
@@ -102,8 +104,13 @@ class AppController:
                     paper.abstract_ja = translated_abstract
 
             except Exception as e:
-                # 翻訳が失敗しても検索結果は表示するが、原因はログに残す
-                logging.exception("翻訳処理で例外が発生しました")
+                # キャンセル例外は特別扱い
+                if isinstance(e, TranslationCanceledException):
+                    logging.info("翻訳がキャンセルされました")
+                    return
+                else:
+                    # その他の例外はログに残す
+                    logging.exception("翻訳処理で例外が発生しました")
 
         except Exception as e:
             # エラー時はエラービューを表示

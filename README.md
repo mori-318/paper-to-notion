@@ -57,7 +57,7 @@ paper-to-notion/
 │   │           ├── main_view.py
 │   │           ├── loading_view.py
 │   │           └── request_view.py
-│   ├── colloctors/           # データ収集（ディレクトリ名は将来 "collectors" へ更名推奨）
+│   ├── collectors/           # データ収集（ディレクトリ名は将来 "collectors" へ更名推奨）
 │   ├── config/
 │   ├── domain/               # ドメインモデル
 │   │   ├── __init__.py
