@@ -6,6 +6,8 @@ import logging
 
 from domain.models import SearchConfig
 from services.arxiv_service import ArxivService
+from services.translation_service import TranslationService
+from app.ui.views.result_view import ResultView
 
 class AppController:
     """
@@ -85,17 +87,24 @@ class AppController:
                 start_date=config.start_date,
                 end_date=config.end_date,
             )
-            # 翻訳（バックグラウンドスレッド内で実行）
+
+            logging.info(f"検索結果: {len(papers)}件")
+            # 翻訳（バッチ処理）
             try:
-                from services.translation_service import TranslationService
                 translator = TranslationService()
-                for p in papers:
-                    # すでに翻訳済みでなければ翻訳
-                    if getattr(p, "abstract", "") and not getattr(p, "abstract_ja", ""):
-                        p.abstract_ja = translator.translate_en_to_jp(p.abstract)
+
+                # 全てのabstractをリストにまとめて翻訳
+                abstracts = [p.abstract for p in papers]
+                translated_abstracts = translator.translate_en_to_jp(abstracts)
+
+                # 翻訳結果を元の論文オブジェクトに設定
+                for paper, translated_abstract in zip(papers, translated_abstracts):
+                    paper.abstract_ja = translated_abstract
+
             except Exception as e:
                 # 翻訳が失敗しても検索結果は表示するが、原因はログに残す
                 logging.exception("翻訳処理で例外が発生しました")
+
         except Exception as e:
             # エラー時はエラービューを表示
             def error_view(parent: ctk.CTkFrame) -> ctk.CTkFrame:
@@ -109,52 +118,8 @@ class AppController:
         if self._is_cancelling:
             return
 
-        # メインスレッドで結果表示
-        self.window.after(0, lambda: self.show_view(lambda parent: self._create_results_view(parent, papers)))
-
-    def _create_results_view(self, parent: ctk.CTkFrame, papers: List[object]) -> ctk.CTkFrame:
-        """
-        検索結果を表示する簡易ビューを生成する。
-        Args:
-            parent (ctk.CTkFrame): 親フレーム
-            papers (List[object]): 検索結果
-        Returns:
-            ctk.CTkFrame: 生成したビュー
-        """
-        frame = ctk.CTkFrame(parent)
-
-        # ヘッダー
-        header = ctk.CTkFrame(frame)
-        header.pack(fill="x", padx=10, pady=10)
-        ctk.CTkLabel(header, text="検索結果", font=ctk.CTkFont(size=18, weight="bold")).pack(side="left")
-        ctk.CTkButton(header, text="条件へ戻る", command=self.cancel_request).pack(side="right")
-
-        # リスト（スクロール）
-        list_area = ctk.CTkScrollableFrame(frame, height=400)
-        list_area.pack(fill="both", expand=True, padx=10, pady=10)
-
-        if not papers:
-            ctk.CTkLabel(list_area, text="該当する論文が見つかりませんでした。").pack(pady=20)
-            return frame
-
-        for p in papers:
-            item = ctk.CTkFrame(list_area)
-            item.pack(fill="x", padx=5, pady=6)
-            title = getattr(p, "title", "(no title)")
-            date = getattr(p, "published_date", "")
-            url = getattr(p, "url", "")
-            abstract_ja = getattr(p, "abstract_ja", "")
-            abstract_en = getattr(p, "abstract", "")
-            # 日本語訳があれば優先して表示
-            abstract = abstract_ja or abstract_en
-
-            ctk.CTkLabel(item, text=title, font=ctk.CTkFont(size=14, weight="bold"), anchor="w").pack(fill="x")
-            ctk.CTkLabel(item, text=f"{date}  |  {url}", anchor="w").pack(fill="x")
-            # abstractは長いので先頭だけ
-            preview = abstract[:200] + ("..." if len(abstract) > 200 else "")
-            ctk.CTkLabel(item, text=preview, anchor="w", justify="left", wraplength=800).pack(fill="x")
-
-        return frame
+        # メインスレッドで結果表示 (論文ごとにResultViewを作成して表示する)
+        self.window.after(0, lambda: self.show_view(lambda parent: ResultView(parent, controller=self, papers=papers)))
 
     def cancel_request(self):
         """

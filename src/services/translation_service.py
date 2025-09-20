@@ -38,7 +38,7 @@ class TranslationService:
             List[str]: 翻訳した日本語リスト
         """
 
-        logging.info(f"翻訳開始: {texts}")
+        logging.info(f"翻訳開始: {len(texts)}件")
 
         # このモデルは system ロール非対応のため、指示は user メッセージに埋め込む
         instruction = self.cfg.system_prompt
@@ -49,6 +49,9 @@ class TranslationService:
             if not text:
                 translated_texts.append("")
                 continue
+
+            # 進捗ログ
+            logging.info(f"翻訳中: {text[:20]}...")
 
             user_prompt = f"{instruction}\n\n{text}"
 
@@ -65,7 +68,7 @@ class TranslationService:
             )
             try:
                 res = res.choices[0].message.content
-                logging.info(f"翻訳完了: {res}")
+                logging.info(f"翻訳完了: {res[:20]}...")
                 translated_texts.append(res)
             except Exception:
                 logging.error("翻訳失敗")
