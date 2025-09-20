@@ -102,16 +102,6 @@ class RequestView(ctk.CTkFrame):
         self.end_date_entry = DateEntry(self.date_range_frame, date_pattern="yyyy-mm-dd", width=14, **calendar_style)
         self.end_date_entry.pack(side="left")
 
-        # テキスト入力でも日時指定可能に（テキストが優先される）
-        self.date_text_frame = ctk.CTkFrame(self)
-        self.date_text_frame.pack(pady=(6, 0), fill="x")
-        ctk.CTkLabel(self.date_text_frame, text="開始日(テキスト):").pack(side="left", padx=(5, 5))
-        self.start_date_text = ctk.CTkEntry(self.date_text_frame, width=180, placeholder_text="例: 2025-09-01 / 1年0月0日前 / -30d / 今日")
-        self.start_date_text.pack(side="left", padx=(0, 10))
-        ctk.CTkLabel(self.date_text_frame, text="終了日(テキスト):").pack(side="left", padx=(5, 5))
-        self.end_date_text = ctk.CTkEntry(self.date_text_frame, width=180, placeholder_text="例: 2025/09/20 / 0年0月0日前 / 今日")
-        self.end_date_text.pack(side="left", padx=(0, 5))
-
         # デフォルト値: 開始=今日-30日, 終了=今日
         _today = date.today()
         _start_default = _today - timedelta(days=30)
@@ -211,24 +201,15 @@ class RequestView(ctk.CTkFrame):
         """
         リクエストを送信
         """
-        # フォームデータを収集（選択された日付を相対表現に変換）
-        # テキストが入力されていればテキストを優先して解釈
-        start_text = (self.start_date_text.get() or "").strip()
-        end_text = (self.end_date_text.get() or "").strip()
+        # カレンダーから日付を取得し、前後関係を正す
+        start_dt = self.start_date_entry.get_date()
+        end_dt = self.end_date_entry.get_date()
+        if end_dt < start_dt:
+            start_dt, end_dt = end_dt, start_dt
 
-        start_date = self._text_to_relative_jp(start_text)
-        end_date = self._text_to_relative_jp(end_text)
-
-        # どちらか未入力/解釈不能の場合はカレンダー値を使用
-        if start_date is None or end_date is None:
-            start_dt = self.start_date_entry.get_date()
-            end_dt = self.end_date_entry.get_date()
-            if end_dt < start_dt:
-                start_dt, end_dt = end_dt, start_dt
-            if start_date is None:
-                start_date = self._to_relative_jp(start_dt)
-            if end_date is None:
-                end_date = self._to_relative_jp(end_dt)
+        # 相対表現に変換
+        start_date = self._to_relative_jp(start_dt)
+        end_date = self._to_relative_jp(end_dt)
 
         config = SearchConfig(
             keyword=[self.keyword_entry.get()],
