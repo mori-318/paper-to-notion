@@ -1,5 +1,9 @@
+import os
+import json
+from datetime import date, timedelta, datetime
 import customtkinter as ctk
 from domain.models import SearchConfig
+from tkcalendar import DateEntry
 
 class RequestView(ctk.CTkFrame):
     """
@@ -8,6 +12,9 @@ class RequestView(ctk.CTkFrame):
     def __init__(self, master: ctk.CTkFrame, controller):
         super().__init__(master)
         self.controller = controller
+        # 保存先パスを用意(アプリ専用フォルダを~に用意し、keywords.jsonを保存する)
+        self._store_path = os.path.join(os.path.expanduser("~"), ".paper_to_notion", "keywords.json")
+        self._saved_keywords = self._load_saved_keywords()
 
         # キーワード入力フィールド
         self.keyword_frame = ctk.CTkFrame(self)
@@ -19,6 +26,15 @@ class RequestView(ctk.CTkFrame):
             width=300,
         )
         self.keyword_entry.pack(side="left", padx=5)
+
+        # 保存済みキーワードの選択UI
+        self.saved_frame = ctk.CTkFrame(self)
+        self.saved_frame.pack(pady=4, fill="x")
+        ctk.CTkLabel(self.saved_frame, text="保存済み:").pack(side="left", padx=5)
+        values = self._saved_keywords if self._saved_keywords else ["(なし)"]
+        self.saved_var = ctk.StringVar(value=values[0])
+        self.saved_menu = ctk.CTkOptionMenu(self.saved_frame, variable=self.saved_var, values=values, command=self._on_select_saved)
+        self.saved_menu.pack(side="left", padx=5)
 
         # キーワード保存チェックボックス
         self.save_keyword_var = ctk.BooleanVar(value=False)
@@ -37,6 +53,7 @@ class RequestView(ctk.CTkFrame):
             text="調査数:",
         ).pack(side="left", padx=5)
 
+        # 調査数スライダ-
         self.max_results_slider = ctk.CTkSlider(
             self.max_results_frame,
             from_=1,
@@ -47,6 +64,7 @@ class RequestView(ctk.CTkFrame):
         self.max_results_slider.set(5)
         self.max_results_slider.pack(side="left", padx=5)
 
+        # 調査数テキスト入力
         self.max_results_entry = ctk.CTkEntry(
             self.max_results_frame,
             width=50,
@@ -58,43 +76,50 @@ class RequestView(ctk.CTkFrame):
         self.max_results_slider.configure(command=self._update_max_results_entry)
         self.max_results_entry.bind("<Return>", self._update_max_results_slider)
 
-        # 日付範囲（[]年[]月[]日前 ~ []年[]月[]日前まで）
+        # 日付範囲（開始/終了をカレンダーから選択）
         self.date_range_frame = ctk.CTkFrame(self)
         self.date_range_frame.pack(pady=10, fill="x")
-        ctk.CTkLabel(self.date_range_frame, text="日付範囲:").pack(side="left", padx=5)
+        # カレンダーの視認性を上げるためのスタイル指定
+        calendar_style = {
+            "font": ("Helvetica", 16),
+            "foreground": "#ffffff",
+            "background": "#2b2b2b",
+            "headersforeground": "#ffffff",
+            "headersbackground": "#3a3a3a",
+            "normalforeground": "#ffffff",
+            "normalbackground": "#2b2b2b",
+            "weekendforeground": "#ffd166",
+            "weekendbackground": "#2b2b2b",
+            "othermonthforeground": "#9aa0a6",
+            "othermonthbackground": "#2b2b2b",
+            "selectbackground": "#1f6aa5",
+            "selectforeground": "#ffffff",
+        }
+        ctk.CTkLabel(self.date_range_frame, text="開始日:").pack(side="left", padx=5)
+        self.start_date_entry = DateEntry(self.date_range_frame, date_pattern="yyyy-mm-dd", width=14, **calendar_style)
+        self.start_date_entry.pack(side="left", padx=(0, 10))
+        ctk.CTkLabel(self.date_range_frame, text="終了日:").pack(side="left", padx=5)
+        self.end_date_entry = DateEntry(self.date_range_frame, date_pattern="yyyy-mm-dd", width=14, **calendar_style)
+        self.end_date_entry.pack(side="left")
 
-        # 開始: []年 []月 []日前
-        self.start_year_var = ctk.StringVar(value="0")
-        self.start_month_var = ctk.StringVar(value="1")
-        self.start_day_var = ctk.StringVar(value="0")
+        # テキスト入力でも日時指定可能に（テキストが優先される）
+        self.date_text_frame = ctk.CTkFrame(self)
+        self.date_text_frame.pack(pady=(6, 0), fill="x")
+        ctk.CTkLabel(self.date_text_frame, text="開始日(テキスト):").pack(side="left", padx=(5, 5))
+        self.start_date_text = ctk.CTkEntry(self.date_text_frame, width=180, placeholder_text="例: 2025-09-01 / 1年0月0日前 / -30d / 今日")
+        self.start_date_text.pack(side="left", padx=(0, 10))
+        ctk.CTkLabel(self.date_text_frame, text="終了日(テキスト):").pack(side="left", padx=(5, 5))
+        self.end_date_text = ctk.CTkEntry(self.date_text_frame, width=180, placeholder_text="例: 2025/09/20 / 0年0月0日前 / 今日")
+        self.end_date_text.pack(side="left", padx=(0, 5))
 
-        self.start_year_entry = ctk.CTkEntry(self.date_range_frame, width=40, textvariable=self.start_year_var)
-        self.start_year_entry.pack(side="left")
-        ctk.CTkLabel(self.date_range_frame, text="年").pack(side="left", padx=(2, 6))
-        self.start_month_entry = ctk.CTkEntry(self.date_range_frame, width=40, textvariable=self.start_month_var)
-        self.start_month_entry.pack(side="left")
-        ctk.CTkLabel(self.date_range_frame, text="ヶ月").pack(side="left", padx=(2, 6))
-        self.start_day_entry = ctk.CTkEntry(self.date_range_frame, width=40, textvariable=self.start_day_var)
-        self.start_day_entry.pack(side="left")
-        ctk.CTkLabel(self.date_range_frame, text="日前").pack(side="left", padx=(2, 10))
-
-        # チルダ
-        ctk.CTkLabel(self.date_range_frame, text="~").pack(side="left", padx=6)
-
-        # 終了: []年 []月 []日前 まで
-        self.end_year_var = ctk.StringVar(value="0")
-        self.end_month_var = ctk.StringVar(value="0")
-        self.end_day_var = ctk.StringVar(value="0")
-
-        self.end_year_entry = ctk.CTkEntry(self.date_range_frame, width=40, textvariable=self.end_year_var)
-        self.end_year_entry.pack(side="left")
-        ctk.CTkLabel(self.date_range_frame, text="年").pack(side="left", padx=(2, 6))
-        self.end_month_entry = ctk.CTkEntry(self.date_range_frame, width=40, textvariable=self.end_month_var)
-        self.end_month_entry.pack(side="left")
-        ctk.CTkLabel(self.date_range_frame, text="ヶ月").pack(side="left", padx=(2, 6))
-        self.end_day_entry = ctk.CTkEntry(self.date_range_frame, width=40, textvariable=self.end_day_var)
-        self.end_day_entry.pack(side="left")
-        ctk.CTkLabel(self.date_range_frame, text="日前まで").pack(side="left", padx=(2, 0))
+        # デフォルト値: 開始=今日-30日, 終了=今日
+        _today = date.today()
+        _start_default = _today - timedelta(days=30)
+        try:
+            self.start_date_entry.set_date(_start_default)
+            self.end_date_entry.set_date(_today)
+        except Exception:
+            pass
 
         # 送信ボタン
         self.submit_button = ctk.CTkButton(
@@ -122,14 +147,88 @@ class RequestView(ctk.CTkFrame):
         except ValueError:
             pass
 
+    def _ensure_store_dir(self):
+        """保存先ディレクトリを確保"""
+        os.makedirs(os.path.dirname(self._store_path), exist_ok=True)
+
+    def _load_saved_keywords(self) -> list[str]:
+        """保存済みキーワードを読み込む"""
+        try:
+            if not os.path.exists(self._store_path):
+                return []
+            with open(self._store_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            items = data.get("keywords", [])
+            return [str(x) for x in items if isinstance(x, str) and x.strip()]
+        except Exception:
+            return []
+
+    def _save_keyword(self, kw: str):
+        """
+        キーワードを保存（重複は先頭に移動、最大10件）
+        Args:
+            kw(str): 保存するキーワード
+        """
+        kw = (kw or "").strip()
+        if not kw:
+            return
+        items = list(self._saved_keywords)
+        if kw in items:
+            items.remove(kw)
+        items.insert(0, kw)
+        if len(items) > 10:
+            items = items[:10]
+
+        self._ensure_store_dir()
+        try:
+            with open(self._store_path, "w", encoding="utf-8") as f:
+                json.dump({"keywords": items}, f, ensure_ascii=False, indent=2)
+            self._saved_keywords = items
+            self._update_saved_menu()
+        except Exception:
+            pass
+
+    def _update_saved_menu(self):
+        """保存済みキーワードの選択UIを更新"""
+        values = self._saved_keywords if self._saved_keywords else ["(なし)"]
+        self.saved_menu.configure(values=values)
+        if self._saved_keywords:
+            self.saved_var.set(self._saved_keywords[0])
+        else:
+            self.saved_var.set("(なし)")
+
+    def _on_select_saved(self, choice: str):
+        """
+        保存済みキーワードを選択したときにキーワード入力欄を更新
+        Args:
+            choice(str): 選択されたキーワード
+        """
+        if choice and choice != "(なし)":
+            self.keyword_entry.delete(0, "end")
+            self.keyword_entry.insert(0, choice)
+
     def submit_request(self):
         """
         リクエストを送信
         """
-        # フォームデータを収集
-        # 週は0固定で内部フォーマットを構築
-        start_date = f"{self.start_year_var.get()}年{self.start_month_var.get()}月{self.start_day_var.get()}日前"
-        end_date = f"{self.end_year_var.get()}年{self.end_month_var.get()}月{self.end_day_var.get()}日前"
+        # フォームデータを収集（選択された日付を相対表現に変換）
+        # テキストが入力されていればテキストを優先して解釈
+        start_text = (self.start_date_text.get() or "").strip()
+        end_text = (self.end_date_text.get() or "").strip()
+
+        start_date = self._text_to_relative_jp(start_text)
+        end_date = self._text_to_relative_jp(end_text)
+
+        # どちらか未入力/解釈不能の場合はカレンダー値を使用
+        if start_date is None or end_date is None:
+            start_dt = self.start_date_entry.get_date()
+            end_dt = self.end_date_entry.get_date()
+            if end_dt < start_dt:
+                start_dt, end_dt = end_dt, start_dt
+            if start_date is None:
+                start_date = self._to_relative_jp(start_dt)
+            if end_date is None:
+                end_date = self._to_relative_jp(end_dt)
 
         config = SearchConfig(
             keyword=[self.keyword_entry.get()],
@@ -138,10 +237,77 @@ class RequestView(ctk.CTkFrame):
             end_date=end_date,
         )
 
-        # キーワード保存チェックが入っている場合、設定を保存
+        # キーワード保存チェックが入っていいる場合、設定を保存
         if self.save_keyword_var.get():
-            # TODO: キーワード保存処理を後で実装
-            pass
+            self._save_keyword(self.keyword_entry.get())
 
         # コントローラーに設定を渡す
         self.controller.submit_request(config)
+
+    def _text_to_relative_jp(self, s: str) -> str | None:
+        """
+        ユーザー入力文字列を相対表現（X年Y月Z日前）に変換して返す。
+        サポート:
+        - 絶対日付: YYYY-MM-DD / YYYY/MM/DD / YYYY.MM.DD
+        - 相対表現: 「X年Y月Z日前」または「X年前」「Yヶ月前」「Z日前」等の部分指定
+        - キーワード: 今日 / yesterday(昨日) / today
+        - 簡易相対: -30d, -1m, -1y
+        変換できない場合は None を返す。
+        """
+        import re
+        s = (s or "").strip()
+        if not s:
+            return None
+        # today / 今日
+        if s in ("今日", "today"):
+            return "0年0月0日前"
+        if s in ("昨日", "yesterday"):
+            return "0年0月1日前"
+        # -Nd / -Nm / -Ny
+        m = re.fullmatch(r"-?\s*(\d+)\s*([dmyDMY])", s)
+        if m:
+            n = int(m.group(1))
+            unit = m.group(2).lower()
+            if unit == "d":
+                return f"0年0月{n}日前"
+            if unit == "m":
+                return f"0年{n}月0日前"
+            if unit == "y":
+                return f"{n}年0月0日前"
+        # 既に相対表現（完全形）
+        if re.fullmatch(r"\d+年\d+月\d+日前", s):
+            return s
+        # 部分指定（例: 1年前, 3ヶ月前, 10日前）を統合
+        y = mth = d = 0
+        for pat, attr in ((r"(\d+)年\s*前", "y"), (r"(\d+)ヶ月\s*前", "m"), (r"(\d+)月\s*前", "m"), (r"(\d+)日\s*前", "d")):
+            m2 = re.search(pat, s)
+            if m2:
+                val = int(m2.group(1))
+                if attr == "y":
+                    y = val
+                elif attr == "m":
+                    mth = val
+                else:
+                    d = val
+        if y or mth or d:
+            return f"{y}年{mth}月{d}日前"
+        # 絶対日付
+        for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%Y.%m.%d"):
+            try:
+                dt = datetime.strptime(s, fmt).date()
+                return self._to_relative_jp(dt)
+            except Exception:
+                pass
+        return None
+
+    def _to_relative_jp(self, target: date) -> str:
+        """絶対日付を「X年Y月Z日前」に変換（365日=1年, 30日=1ヶ月の簡易換算）"""
+        today = date.today()
+        delta_days = (today - target).days
+        if delta_days < 0:
+            delta_days = 0
+        y = delta_days // 365
+        rem = delta_days % 365
+        m = rem // 30
+        d = rem % 30
+        return f"{y}年{m}月{d}日前"
