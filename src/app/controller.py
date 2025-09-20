@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Optional, Type, Callable, Union, List
 import threading
 import customtkinter as ctk
+import logging
 
 from domain.models import SearchConfig
 from services.arxiv_service import ArxivService
@@ -84,6 +85,17 @@ class AppController:
                 start_date=config.start_date,
                 end_date=config.end_date,
             )
+            # 翻訳（バックグラウンドスレッド内で実行）
+            try:
+                from services.translation_service import TranslationService
+                translator = TranslationService()
+                for p in papers:
+                    # すでに翻訳済みでなければ翻訳
+                    if getattr(p, "abstract", "") and not getattr(p, "abstract_ja", ""):
+                        p.abstract_ja = translator.translate_en_to_jp(p.abstract)
+            except Exception as e:
+                # 翻訳が失敗しても検索結果は表示するが、原因はログに残す
+                logging.exception("翻訳処理で例外が発生しました")
         except Exception as e:
             # エラー時はエラービューを表示
             def error_view(parent: ctk.CTkFrame) -> ctk.CTkFrame:
@@ -131,7 +143,10 @@ class AppController:
             title = getattr(p, "title", "(no title)")
             date = getattr(p, "published_date", "")
             url = getattr(p, "url", "")
-            abstract = getattr(p, "abstract", "")
+            abstract_ja = getattr(p, "abstract_ja", "")
+            abstract_en = getattr(p, "abstract", "")
+            # 日本語訳があれば優先して表示
+            abstract = abstract_ja or abstract_en
 
             ctk.CTkLabel(item, text=title, font=ctk.CTkFont(size=14, weight="bold"), anchor="w").pack(fill="x")
             ctk.CTkLabel(item, text=f"{date}  |  {url}", anchor="w").pack(fill="x")
