@@ -45,6 +45,7 @@ class ArxivService:
         Returns:
             Paper: 変換後のPaperモデル
         """
+        id = e.get("id", "").strip()
         title = e.get("title", "").strip()
         link = e.get("link", "")
         authors = [a.get("name", "") for a in e.get("authors", [])]
@@ -62,6 +63,7 @@ class ArxivService:
                 pass
         abstract = e.get("summary", "").strip()
         return Paper(
+            id=id,
             title=title,
             url=link,
             authors=authors,

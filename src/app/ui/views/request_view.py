@@ -30,7 +30,7 @@ class RequestView(ctk.CTkFrame):
         # 保存済みキーワードの選択UI
         self.saved_frame = ctk.CTkFrame(self)
         self.saved_frame.pack(pady=4, fill="x")
-        ctk.CTkLabel(self.saved_frame, text="保存済み:").pack(side="left", padx=5)
+        ctk.CTkLabel(self.saved_frame, text="保存済みキーワード:").pack(side="left", padx=5)
         values = self._saved_keywords if self._saved_keywords else ["(なし)"]
         self.saved_var = ctk.StringVar(value=values[0])
         self.saved_menu = ctk.CTkOptionMenu(self.saved_frame, variable=self.saved_var, values=values, command=self._on_select_saved)

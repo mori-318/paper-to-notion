@@ -16,6 +16,7 @@ class SearchConfig(BaseModel):
 class Paper(BaseModel):
     """
     Paper model
+    - id: str
     - title: str
     - url: str
     - authors: List[str]
@@ -24,6 +25,7 @@ class Paper(BaseModel):
     - abstract: str
     - abstract_ja: str (ローカルLMによる翻訳後)
     """
+    id: str
     title: str
     url: str
     authors: List[str]

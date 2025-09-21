@@ -9,9 +9,11 @@ dependencies = [
     "feedparser>=6.0.12",
     "google-genai>=1.38.0",
     "ipykernel>=6.30.1",
+    "notion-client>=2.5.0",
     "openai>=1.108.1",
     "pydantic>=2.11.9",
     "pytest>=8.4.2",
     "python-dotenv>=1.1.1",
     "tkcalendar>=1.6.1",
+    "ujson>=5.11.0",
 ]
