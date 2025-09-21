@@ -1,3 +1,4 @@
+from turtle import color
 import customtkinter as ctk
 from typing import List, Any
 import webbrowser
@@ -110,11 +111,32 @@ class ResultView(ctk.CTkFrame):
         except Exception:
             formatted_date = str(date) if date else ""
 
-        if formatted_date:
+        # 著者情報の取得と整形
+        authors = getattr(paper, "authors", [])
+        author_text = ""
+        if authors:
+            # 最大2名まで表示、3名以上は「et al.」を追加
+            if len(authors) > 2:
+                author_text = ", ".join(authors[:2]) + " et al."
+            else:
+                author_text = ", ".join(authors)
+
+        # 日付と著者を結合（著者がいない場合は日付のみ）
+        if formatted_date and author_text:
+            meta_text = f"{formatted_date} || {author_text}"
+        elif formatted_date:
+            meta_text = formatted_date
+        elif author_text:
+            meta_text = author_text
+        else:
+            meta_text = ""
+
+        if meta_text:
             meta_label = ctk.CTkLabel(
                 item_frame,
-                text=formatted_date,
-                anchor="w"
+                text=meta_text,
+                anchor="w",
+                text_color="#008000"  # 緑
             )
             # 右側に余白を追加
             meta_label.pack(fill="x", padx=(2, 6))
