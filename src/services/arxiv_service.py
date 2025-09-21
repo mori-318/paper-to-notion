@@ -7,6 +7,51 @@ import feedparser
 from domain.models import Paper
 
 class ArxivService:
+    def _extract_arxiv_id(self, s: str) -> str | None:
+        """
+        文字列から arXiv の識別子を抽出する。
+        サポート:
+        - 新形式: 2101.12345 または 2101.12345v2
+        - 旧形式: astro-ph/0601001 または astro-ph/0601001v2
+        - URL: https://arxiv.org/abs/<id>, https://arxiv.org/pdf/<id>.pdf など
+        """
+        try:
+            s = (s or "").strip()
+            if not s:
+                return None
+            # URL から抽出
+            m = re.search(r"arxiv\.org/(abs|pdf|html)/([^\s?#/]+)", s)
+            if m:
+                ident = m.group(2)
+                ident = re.sub(r"\.pdf$", "", ident, flags=re.IGNORECASE)
+                return ident
+            # 新形式 ID
+            if re.fullmatch(r"\d{4}\.\d{4,5}(v\d+)?", s):
+                return s
+            # 旧形式 ID (例: astro-ph/0601001)
+            if re.fullmatch(r"[a-zA-Z\-\.]+/\d{7}(v\d+)?", s):
+                return s
+        except Exception:
+            pass
+        return None
+
+    def _fetch_entries_by_id_list(self, ids: list[str], max_results: int) -> list:
+        """id_list で arXiv API から entries を取得（最大 max_results 件まで）"""
+        if not ids:
+            return []
+        url = "http://export.arxiv.org/api/query"
+        # arXiv API は id_list をカンマ区切りで指定
+        params = {
+            "id_list": ",".join(ids)[:2048],  # 念のためサイズを制限
+            "start": 0,
+            "max_results": max_results,
+            "sortBy": "submittedDate",
+            "sortOrder": "descending",
+        }
+        resp = requests.get(url, params=params, timeout=20)
+        resp.raise_for_status()
+        feed = feedparser.parse(resp.text)
+        return getattr(feed, "entries", [])
     def _parse_relative_jp(self, expr: str) -> date:
         """
         「X年Y月Z日前」の形式を今日からの相対日付に変換
@@ -92,33 +137,56 @@ class ArxivService:
         Returns:
             List[Paper]: 検索結果リスト
         """
-        # クエリ構築（abs: に対する OR）
-        terms = [f"abs:{kw}" for kw in keywords if kw]
-        if not terms:
-            return []
-        query = "+OR+".join(terms)
+        # キーワードを arXiv ID/URL と テキスト に分離
+        ids: list[str] = []
+        text_terms: list[str] = []
+        for kw in keywords:
+            if not kw:
+                continue
+            arx_id = self._extract_arxiv_id(str(kw))
+            if arx_id:
+                ids.append(arx_id)
+            else:
+                text_terms.append(str(kw))
 
-        url = "http://export.arxiv.org/api/query"
-        params = {
-            "search_query": query,
-            "start": 0,
-            "max_results": max_results,
-            "sortBy": "submittedDate",
-            "sortOrder": "descending",
-        }
+        entries = []
+        # 1) id_list で取得
+        if ids:
+            entries.extend(self._fetch_entries_by_id_list(ids, max_results))
 
-        resp = requests.get(url, params=params, timeout=20)
-        resp.raise_for_status()
-        feed = feedparser.parse(resp.text)
+        # 2) テキスト検索（abs: に対する OR）
+        if text_terms:
+            url = "http://export.arxiv.org/api/query"
+            query = "+OR+".join([f"abs:{kw}" for kw in text_terms])
+            params = {
+                "search_query": query,
+                "start": 0,
+                "max_results": max_results,
+                "sortBy": "submittedDate",
+                "sortOrder": "descending",
+            }
+            resp = requests.get(url, params=params, timeout=20)
+            resp.raise_for_status()
+            feed = feedparser.parse(resp.text)
+            entries.extend(getattr(feed, "entries", []))
 
-        # 相対日付の解釈と範囲正規化
-        start_d = self._parse_relative_jp(start_date)
-        end_d = self._parse_relative_jp(end_date)
+        # 相対日付の解釈と範囲正規化（空文字は無期限として扱う）
+        if not start_date:
+            start_d = date.min
+        else:
+            start_d = self._parse_relative_jp(start_date)
+
+        if not end_date:
+            end_d = date.max
+        else:
+            end_d = self._parse_relative_jp(end_date)
         if end_d < start_d:
             start_d, end_d = end_d, start_d
 
+        # 重複排除（idでユニーク化）
+        seen_ids: set[str] = set()
         papers: List[Paper] = []
-        for e in feed.entries:
+        for e in entries:
             pub_raw = e.get("published", "")
             try:
                 # ISO8601形式の日時文字列をUTCに変換
@@ -127,6 +195,10 @@ class ArxivService:
                 published_dt = None
             if published_dt is not None and not self._within_range(published_dt, start_d, end_d):
                 continue
+            pid = e.get("id", "")
+            if pid in seen_ids:
+                continue
+            seen_ids.add(pid)
             papers.append(self._entry_to_paper(e))
 
         return papers

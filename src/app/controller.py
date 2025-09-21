@@ -188,16 +188,25 @@ class AppController:
                     # 初期化失敗（環境変数未設定など）
                     self.window.after(0, lambda: self._show_error("Notionの設定が未完了です。環境変数を確認してください。"))
                     return
+            success_ids = []
             for paper in papers:
                 if self._is_cancelling:
                     break
-                self.notion_service.create_page(paper)
+                ok = self.notion_service.create_page(paper)
+                if ok:
+                    success_ids.append(paper.id)
         except Exception as e:
             logging.exception("Notion保存中に例外が発生しました")
             self.window.after(0, lambda: self._show_error("Notion保存中にエラーが発生しました"))
         finally:
-            # 元の検索結果一覧に戻す
-            self.window.after(0, lambda: self.show_view(lambda parent: ResultView(parent, controller=self, papers=self._last_papers)))
+            # 成功した論文を一覧から除外
+            def _finish():
+                nonlocal success_ids
+                if isinstance(success_ids, list) and success_ids:
+                    self._last_papers = [p for p in self._last_papers if p.id not in success_ids]
+                # 更新後の一覧を表示
+                self.show_view(lambda parent: ResultView(parent, controller=self, papers=self._last_papers))
+            self.window.after(0, _finish)
 
     def _show_error(self, message: str):
         """簡易的なエラービューを表示"""

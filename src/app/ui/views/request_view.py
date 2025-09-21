@@ -96,11 +96,30 @@ class RequestView(ctk.CTkFrame):
             "selectforeground": "#ffffff",
         }
         ctk.CTkLabel(self.date_range_frame, text="開始日:").pack(side="left", padx=5)
-        self.start_date_entry = DateEntry(self.date_range_frame, date_pattern="yyyy-mm-dd", width=14, **calendar_style)
-        self.start_date_entry.pack(side="left", padx=(0, 10))
+        self.start_date_entry = DateEntry(self.date_range_frame, date_pattern="yyyy-mm-dd", width=10, **calendar_style)
+        self.start_date_entry.pack(side="left", padx=(0, 4))
+        # 開始日 無期限チェック
+        self.start_infinite_var = ctk.BooleanVar(value=False)
+        self.start_infinite_checkbox = ctk.CTkCheckBox(
+            self.date_range_frame,
+            text="無期限",
+            variable=self.start_infinite_var,
+            command=self._on_toggle_start_infinite,
+        )
+        self.start_infinite_checkbox.pack(side="left", padx=(0, 10))
+
         ctk.CTkLabel(self.date_range_frame, text="終了日:").pack(side="left", padx=5)
-        self.end_date_entry = DateEntry(self.date_range_frame, date_pattern="yyyy-mm-dd", width=14, **calendar_style)
-        self.end_date_entry.pack(side="left")
+        self.end_date_entry = DateEntry(self.date_range_frame, date_pattern="yyyy-mm-dd", width=10, **calendar_style)
+        self.end_date_entry.pack(side="left", padx=(0, 4))
+        # 終了日 無期限チェック
+        self.end_infinite_var = ctk.BooleanVar(value=False)
+        self.end_infinite_checkbox = ctk.CTkCheckBox(
+            self.date_range_frame,
+            text="無期限",
+            variable=self.end_infinite_var,
+            command=self._on_toggle_end_infinite,
+        )
+        self.end_infinite_checkbox.pack(side="left")
 
         # デフォルト値: 開始=今日-30日, 終了=今日
         _today = date.today()
@@ -110,6 +129,8 @@ class RequestView(ctk.CTkFrame):
             self.end_date_entry.set_date(_today)
         except Exception:
             pass
+
+        # 無期限チェック時の初期状態反映（デフォルトはオフなので何もしない）
 
         # 送信ボタン
         self.submit_button = ctk.CTkButton(
@@ -201,15 +222,29 @@ class RequestView(ctk.CTkFrame):
         """
         リクエストを送信
         """
-        # カレンダーから日付を取得し、前後関係を正す
-        start_dt = self.start_date_entry.get_date()
-        end_dt = self.end_date_entry.get_date()
-        if end_dt < start_dt:
-            start_dt, end_dt = end_dt, start_dt
+        # 無期限チェックの状態に応じて処理
+        start_infinite = self.start_infinite_var.get()
+        end_infinite = self.end_infinite_var.get()
 
-        # 相対表現に変換
-        start_date = self._to_relative_jp(start_dt)
-        end_date = self._to_relative_jp(end_dt)
+        if start_infinite:
+            start_date = ""  # 無期限（下限なし）
+        else:
+            start_dt = self.start_date_entry.get_date()
+            start_date = self._to_relative_jp(start_dt)
+
+        if end_infinite:
+            end_date = ""  # 無期限（上限なし）
+        else:
+            end_dt = self.end_date_entry.get_date()
+            end_date = self._to_relative_jp(end_dt)
+
+        # 両方とも有効日付のときのみ前後関係を正す（空文字は無期限）
+        if start_date and end_date:
+            start_dt2 = self.start_date_entry.get_date()
+            end_dt2 = self.end_date_entry.get_date()
+            if end_dt2 < start_dt2:
+                # スワップして再計算
+                start_date, end_date = end_date, start_date
 
         config = SearchConfig(
             keyword=[self.keyword_entry.get()],
@@ -224,6 +259,26 @@ class RequestView(ctk.CTkFrame):
 
         # コントローラーに設定を渡す
         self.controller.submit_request(config)
+
+    def _on_toggle_start_infinite(self):
+        """開始日 無期限のON/OFFでDateEntryを有効/無効化"""
+        try:
+            if self.start_infinite_var.get():
+                self.start_date_entry.configure(state="disabled")
+            else:
+                self.start_date_entry.configure(state="normal")
+        except Exception:
+            pass
+
+    def _on_toggle_end_infinite(self):
+        """終了日 無期限のON/OFFでDateEntryを有効/無効化"""
+        try:
+            if self.end_infinite_var.get():
+                self.end_date_entry.configure(state="disabled")
+            else:
+                self.end_date_entry.configure(state="normal")
+        except Exception:
+            pass
 
     def _text_to_relative_jp(self, s: str) -> str | None:
         """

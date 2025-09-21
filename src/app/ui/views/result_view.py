@@ -93,19 +93,25 @@ class ResultView(ctk.CTkFrame):
         abstract_en = getattr(paper, "abstract", "")
         abstract = abstract_ja or abstract_en
 
-        # タイトルリンク
-        title_button = ctk.CTkButton(
+        # タイトル（リンク風ラベル、折り返し対応）
+        title_label = ctk.CTkLabel(
             info_frame,
             text=title,
             font=ctk.CTkFont(size=14, weight="bold"),
             anchor="w",
             fg_color="transparent",
-            hover_color="#f0f0f0",
             text_color="#1a5fb4",
-            command=lambda u=url: webbrowser.open(u) if u else None
+            justify="left",
+            wraplength=120,
         )
-        # 左詰にして余白を広めに
-        title_button.pack(anchor="w", fill="x", padx=(12, 14), pady=(4, 2))
+        title_label.pack(anchor="w", fill="x", padx=(12, 12), pady=(4, 2))
+        # クリックでURLを開く
+        if url:
+            try:
+                title_label.configure(cursor="hand2")
+            except Exception:
+                pass
+            title_label.bind("<Button-1>", lambda e, u=url: webbrowser.open(u))
 
         # メタ情報
         formatted_date = ""
@@ -157,7 +163,7 @@ class ResultView(ctk.CTkFrame):
                 text_color="#008000"  # 緑
             )
             # 右側に余白を追加（内部余白を少し広めに）
-            meta_label.pack(fill="x", padx=(6, 10))
+            meta_label.pack(fill="x", padx=(12, 12))
 
         # アブストラクト（全文表示）
         abstract_label = ctk.CTkLabel(
@@ -169,15 +175,17 @@ class ResultView(ctk.CTkFrame):
             wraplength=100
         )
         # 右側に余白を追加（内部余白を少し広めに）
-        abstract_label.pack(fill="x", padx=(6, 10), pady=(2, 6))
+        abstract_label.pack(fill="x", padx=(12, 12), pady=(2, 6))
 
         # フレームのサイズに合わせて折り返し幅を更新（スクロールバー幅分を差し引く）
-        def _update_wraplength(event=None, lbl=abstract_label, frame=info_frame):
+        def _update_wraplength(event=None, lbl_abstract=abstract_label, lbl_title=title_label, frame=info_frame):
             try:
                 w = frame.winfo_width()
                 if w and w > 0:
-                    # 右側のチェックボックス分と内部余白を差し引く
-                    lbl.configure(wraplength=max(w - 24, 160))
+                    # 右側のチェックボックス分と内部余白（左右 12px ずつ）を差し引く
+                    wl = max(w - (24 + 24), 160)
+                    lbl_abstract.configure(wraplength=wl)
+                    lbl_title.configure(wraplength=wl)
             except Exception:
                 pass
 
