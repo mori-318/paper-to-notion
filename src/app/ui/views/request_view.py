@@ -13,7 +13,7 @@ class RequestView(ctk.CTkFrame):
         super().__init__(master)
         self.controller = controller
         # 保存先パスを用意(アプリ専用フォルダを~に用意し、keywords.jsonを保存する)
-        self._store_path = os.path.join(os.path.expanduser("~"), ".paper_to_notion", "keywords.json")
+        self._store_path = os.path.join("src", "config", "keywords.json")
         self._saved_keywords = self._load_saved_keywords()
 
         # キーワード入力フィールド
@@ -174,11 +174,11 @@ class RequestView(ctk.CTkFrame):
             with open(self._store_path, "w", encoding="utf-8") as f:
                 json.dump({"keywords": items}, f, ensure_ascii=False, indent=2)
             self._saved_keywords = items
-            self._update_saved_menu()
+            self._update_saved_keywords_menu()
         except Exception:
             pass
 
-    def _update_saved_menu(self):
+    def _update_saved_keywords_menu(self):
         """保存済みキーワードの選択UIを更新"""
         values = self._saved_keywords if self._saved_keywords else ["(なし)"]
         self.saved_menu.configure(values=values)
