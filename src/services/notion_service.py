@@ -3,6 +3,7 @@ from notion_client import Client
 
 from domain.models import Paper
 
+
 class NotionService:
     def __init__(self):
         api_key = os.getenv("NOTION_API_KEY", "")

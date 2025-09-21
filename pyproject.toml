@@ -7,6 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
     "customtkinter>=5.2.2",
     "feedparser>=6.0.12",
+    "flake8>=7.3.0",
     "google-genai>=1.38.0",
     "ipykernel>=6.30.1",
     "notion-client>=2.5.0",

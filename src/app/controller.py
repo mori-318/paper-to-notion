@@ -11,6 +11,7 @@ from services.translation_service import TranslationService, TranslationCanceled
 from app.ui.views.result_view import ResultView
 from app.ui.views.loading_view import LoadingView
 
+
 class AppController:
     """
     アプリケーションの制御ロジックを管理するクラス
@@ -30,7 +31,14 @@ class AppController:
         # 直近の検索結果（ResultView 再表示時に使用）
         self._last_papers: List[Paper] = []
 
-    def show_view(self, view: Union[Type[ctk.CTkFrame], Callable[[ctk.CTkFrame], ctk.CTkFrame]], message: Optional[str] = None):
+    def show_view(
+        self,
+        view: Union[
+            Type[ctk.CTkFrame],
+            Callable[[ctk.CTkFrame], ctk.CTkFrame],
+        ],
+        message: Optional[str] = None,
+    ):
         """
         指定ビューをメインコンテンツ領域に表示
         viewには以下のいずれかを渡せる:
@@ -128,10 +136,16 @@ class AppController:
 
         except Exception as e:
             # エラー時はエラービューを表示
+            error_msg = f"検索中にエラーが発生しました: {e}"
+
             def error_view(parent: ctk.CTkFrame) -> ctk.CTkFrame:
                 frame = ctk.CTkFrame(parent)
-                ctk.CTkLabel(frame, text=f"検索中にエラーが発生しました: {e}").pack(pady=20)
-                ctk.CTkButton(frame, text="戻る", command=self.cancel_request).pack(pady=10)
+                ctk.CTkLabel(frame, text=error_msg).pack(pady=20)
+                ctk.CTkButton(
+                    frame,
+                    text="戻る",
+                    command=self.cancel_request,
+                ).pack(pady=10)
                 return frame
             self.window.after(0, lambda: self.show_view(error_view))
             return
@@ -141,7 +155,16 @@ class AppController:
 
         # 検索結果を保持し、メインスレッドで結果表示
         self._last_papers = papers
-        self.window.after(0, lambda: self.show_view(lambda parent: ResultView(parent, controller=self, papers=self._last_papers)))
+        self.window.after(
+            0,
+            lambda: self.show_view(
+                lambda parent: ResultView(
+                    parent,
+                    controller=self,
+                    papers=self._last_papers,
+                )
+            ),
+        )
 
     def cancel_request(self):
         """
@@ -195,17 +218,22 @@ class AppController:
                 ok = self.notion_service.create_page(paper)
                 if ok:
                     success_ids.append(paper.id)
-        except Exception as e:
+        except Exception:
             logging.exception("Notion保存中に例外が発生しました")
             self.window.after(0, lambda: self._show_error("Notion保存中にエラーが発生しました"))
         finally:
             # 成功した論文を一覧から除外
             def _finish():
-                nonlocal success_ids
                 if isinstance(success_ids, list) and success_ids:
                     self._last_papers = [p for p in self._last_papers if p.id not in success_ids]
                 # 更新後の一覧を表示
-                self.show_view(lambda parent: ResultView(parent, controller=self, papers=self._last_papers))
+                self.show_view(
+                    lambda parent: ResultView(
+                        parent,
+                        controller=self,
+                        papers=self._last_papers,
+                    )
+                )
             self.window.after(0, _finish)
 
     def _show_error(self, message: str):
@@ -213,6 +241,16 @@ class AppController:
         def error_view(parent: ctk.CTkFrame) -> ctk.CTkFrame:
             frame = ctk.CTkFrame(parent)
             ctk.CTkLabel(frame, text=message).pack(pady=20)
-            ctk.CTkButton(frame, text="戻る", command=lambda: self.show_view(lambda p: ResultView(p, controller=self, papers=self._last_papers))).pack(pady=10)
+            ctk.CTkButton(
+                frame,
+                text="戻る",
+                command=lambda: self.show_view(
+                    lambda p: ResultView(
+                        p,
+                        controller=self,
+                        papers=self._last_papers,
+                    )
+                ),
+            ).pack(pady=10)
             return frame
         self.show_view(error_view)

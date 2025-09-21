@@ -1,5 +1,6 @@
 import customtkinter as ctk
 
+
 class MainView(ctk.CTkFrame):
     def __init__(self, master: ctk.CTkFrame, **kwargs):
         super().__init__(master, **kwargs)

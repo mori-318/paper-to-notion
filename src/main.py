@@ -1,3 +1,4 @@
+import os
 import logging
 from app.app_window import AppWindow
 

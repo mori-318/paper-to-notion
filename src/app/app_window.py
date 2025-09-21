@@ -1,8 +1,8 @@
 import customtkinter as ctk
 from app.ui.views.main_view import MainView
-from app.ui.views.loading_view import LoadingView
 from app.ui.views.request_view import RequestView
 from .controller import AppController
+
 
 class AppWindow(ctk.CTk):
     """

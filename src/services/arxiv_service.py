@@ -6,6 +6,7 @@ import feedparser
 
 from domain.models import Paper
 
+
 class ArxivService:
     def _extract_arxiv_id(self, s: str) -> str | None:
         """
@@ -20,7 +21,10 @@ class ArxivService:
             if not s:
                 return None
             # URL から抽出
-            m = re.search(r"arxiv\.org/(abs|pdf|html)/([^\s?#/]+)", s)
+            m = re.search(
+                r"arxiv\.org/(abs|pdf|html)/([^\s?#/]+)",
+                s,
+            )
             if m:
                 ident = m.group(2)
                 ident = re.sub(r"\.pdf$", "", ident, flags=re.IGNORECASE)
@@ -35,14 +39,19 @@ class ArxivService:
             pass
         return None
 
-    def _fetch_entries_by_id_list(self, ids: list[str], max_results: int) -> list:
+    def _fetch_entries_by_id_list(
+        self,
+        ids: list[str],
+        max_results: int,
+    ) -> list:
         """id_list で arXiv API から entries を取得（最大 max_results 件まで）"""
         if not ids:
             return []
         url = "http://export.arxiv.org/api/query"
         # arXiv API は id_list をカンマ区切りで指定
         params = {
-            "id_list": ",".join(ids)[:2048],  # 念のためサイズを制限
+            # 念のためサイズを制限
+            "id_list": ",".join(ids)[:2048],
             "start": 0,
             "max_results": max_results,
             "sortBy": "submittedDate",
@@ -52,6 +61,7 @@ class ArxivService:
         resp.raise_for_status()
         feed = feedparser.parse(resp.text)
         return getattr(feed, "entries", [])
+
     def _parse_relative_jp(self, expr: str) -> date:
         """
         「X年Y月Z日前」の形式を今日からの相対日付に変換
@@ -189,11 +199,15 @@ class ArxivService:
         for e in entries:
             pub_raw = e.get("published", "")
             try:
-                # ISO8601形式の日時文字列をUTCに変換
-                published_dt = datetime.strptime(pub_raw, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+                fmt = "%Y-%m-%dT%H:%M:%SZ"
+                published_dt = datetime.strptime(pub_raw, fmt).replace(
+                    tzinfo=timezone.utc
+                )
             except Exception:
                 published_dt = None
-            if published_dt is not None and not self._within_range(published_dt, start_d, end_d):
+            if published_dt is not None and not self._within_range(
+                published_dt, start_d, end_d
+            ):
                 continue
             pid = e.get("id", "")
             if pid in seen_ids:

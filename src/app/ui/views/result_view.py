@@ -3,6 +3,7 @@ from typing import List, Any, Dict
 import webbrowser
 from datetime import datetime
 
+
 class ResultView(ctk.CTkFrame):
     """
     検索結果を表示するビュー

@@ -1,10 +1,11 @@
 from __future__ import annotations
-from typing import Optional, List, Dict, Any, Callable
+from typing import Optional, List, Callable
 from dataclasses import dataclass
 from google import genai
 from dotenv import load_dotenv
 import os
 import logging
+
 
 @dataclass
 class TranslationConfig:
@@ -13,6 +14,7 @@ class TranslationConfig:
     system_prompt: str = "以下の英文を日本語に翻訳し、100字以内に要約した結果のみを出力してください。"
     temperature: float = 1.0
     max_tokens: int = 512
+
 
 class TranslationService:
     """

@@ -5,6 +5,7 @@ import customtkinter as ctk
 from domain.models import SearchConfig
 from tkcalendar import DateEntry
 
+
 class RequestView(ctk.CTkFrame):
     """
     論文調査条件を入力するフォームビュー
@@ -33,7 +34,12 @@ class RequestView(ctk.CTkFrame):
         ctk.CTkLabel(self.saved_frame, text="保存済みキーワード:").pack(side="left", padx=5)
         values = self._saved_keywords if self._saved_keywords else ["(なし)"]
         self.saved_var = ctk.StringVar(value=values[0])
-        self.saved_menu = ctk.CTkOptionMenu(self.saved_frame, variable=self.saved_var, values=values, command=self._on_select_saved)
+        self.saved_menu = ctk.CTkOptionMenu(
+            self.saved_frame,
+            variable=self.saved_var,
+            values=values,
+            command=self._on_select_saved,
+        )
         self.saved_menu.pack(side="left", padx=5)
 
         # キーワード保存チェックボックス

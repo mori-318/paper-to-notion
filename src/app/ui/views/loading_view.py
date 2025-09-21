@@ -1,5 +1,6 @@
 import customtkinter as ctk
 
+
 class LoadingView(ctk.CTkFrame):
     """
     論文調査中のビュー
