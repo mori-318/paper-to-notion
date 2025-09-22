@@ -1,7 +1,8 @@
 # paper-to-notion
 
-![検索画面](./imgs/search_view.png)
-![結果表示画面](./imgs/result_view.png)
+| 検索画面 | 結果表示画面 |
+|:--------:|:------------:|
+| <img src="./imgs/search_view.png" width="300"> | <img src="./imgs/result_view.png" width="300"> |
 
 ## 概要
 arXivからキーワード・日付範囲で論文を収集し、Notionに保存するツール。
