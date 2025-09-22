@@ -1,6 +1,7 @@
 # paper-to-notion
 
-![サービス画像](./img/demo.png)
+![検索画面](./imgs/search_view.png)
+![結果表示画面](./imgs/result_view.png)
 
 ## 概要
 arXivからキーワード・日付範囲で論文を収集し、Notionに保存するツール。
@@ -10,21 +11,41 @@ arXivからキーワード・日付範囲で論文を収集し、Notionに保存
 
 
 ## 主な機能
-- arXivからキーワード・日付範囲で論文を収集する
-- Notionに論文情報を保存する
+- キーワード・日付範囲・調査数でarXivから論文を収集
+- 論文abstructの翻訳・要約
+- 収集した論文を結果表示画面に表示
+- 結果表示画面で指定した論文をNotionに保存
 
 ## 使用技術
 - 言語：Python3.11
-- フレームワーク：FastAPI, React
-- インフラ：AWS, Docker
+- GUI：CustomTkinter
+- arXiv：arXiv API
+- LLM：Google Gemini API
+- Notion：Notion API
 
-## インストール・実行方法
-1. git clone
-2. 必要な依存インストール
-3. 起動コマンド
+## セットアップ・実行手順（パッケージ管理ツール：uv）
+1. Google Gemini API Keyの取得・Notion API Keyの取得
+2. Notion Database IDの取得（使用するDBには、以下のプロパティを設定する）
+    - Progress
+        - プロパティタイプ：ステータス
+        - ステータスの値：未読・途中・読了
+    - Authors
+        - プロパティタイプ：テキスト
+    - Time
+        - プロパティタイプ：**テキスト**
+    - URL
+        - プロパティタイプ：URL
+3. .envファイルの作成・API Key・Notion Database IDの設定（.env.sampleを参照）
+4. uvでの依存環境構築
+```bash
+uv sync
+```
+5. 実行
+```bash
+uv run python src/main.py
+```
 
-
-## 今後の展望
+## 今後の開発予定
 - LLMとの論文を参照したチャット機能追加
 - LLM APIの切り替え(現在はGeminiのみ)
 - ollamaを使ったローカルLLMのサポート
