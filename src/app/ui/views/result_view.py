@@ -1,7 +1,8 @@
 import customtkinter as ctk
-from typing import List, Any
+from typing import List, Any, Dict
 import webbrowser
 from datetime import datetime
+
 
 class ResultView(ctk.CTkFrame):
     """
@@ -16,9 +17,13 @@ class ResultView(ctk.CTkFrame):
         self.controller = controller
         self.papers = papers or []
 
+        # Notion保存チェックボックスの選択状態を管理する{paper_id: BooleanVar}
+        self.save_notion_selected_vars: Dict[str, ctk.BooleanVar] = {}
+
         # UIコンポーネントを作成
         self._create_header()
         self._create_result_list()
+        self._create_notion_save_button()
 
     def _create_header(self):
         """ヘッダー部分を作成"""
@@ -66,6 +71,21 @@ class ResultView(ctk.CTkFrame):
         # 右側に余白を広めに取り、スクロールバーとの重なりを回避
         item_frame.pack(fill="x", padx=(5, 18), pady=6)
 
+        # 水平配置用のメインフレーム
+        content_frame = ctk.CTkFrame(item_frame)
+        content_frame.pack(fill="x", expand=True, padx=4, pady=2)
+
+        # 右側：Notion保存チェックボックス（先に右側を確保してから左を広げる）
+        notion_frame = ctk.CTkFrame(content_frame, width=48)
+        # 右側に固定幅のスペースを確保し、縦方向のみフィル
+        notion_frame.pack(side="right", fill="y", padx=6, pady=6)
+        # pack_propagate(False) でフレームの希望サイズを維持
+        notion_frame.pack_propagate(False)
+
+        # 左側：論文情報
+        info_frame = ctk.CTkFrame(content_frame)
+        info_frame.pack(side="left", fill="both", expand=True, padx=(10, 10), pady=6)
+
         # 論文属性を取得
         title = getattr(paper, "title", "(no title)")
         date = getattr(paper, "published_date", "")
@@ -74,19 +94,25 @@ class ResultView(ctk.CTkFrame):
         abstract_en = getattr(paper, "abstract", "")
         abstract = abstract_ja or abstract_en
 
-        # タイトルリンク
-        title_button = ctk.CTkButton(
-            item_frame,
+        # タイトル（リンク風ラベル、折り返し対応）
+        title_label = ctk.CTkLabel(
+            info_frame,
             text=title,
             font=ctk.CTkFont(size=14, weight="bold"),
             anchor="w",
             fg_color="transparent",
-            hover_color="#f0f0f0",
             text_color="#1a5fb4",
-            command=lambda u=url: webbrowser.open(u) if u else None
+            justify="left",
+            wraplength=120,
         )
-        # 右側に余白を追加
-        title_button.pack(fill="x", padx=(2, 6))
+        title_label.pack(anchor="w", fill="x", padx=(12, 12), pady=(4, 2))
+        # クリックでURLを開く
+        if url:
+            try:
+                title_label.configure(cursor="hand2")
+            except Exception:
+                pass
+            title_label.bind("<Button-1>", lambda e, u=url: webbrowser.open(u))
 
         # メタ情報
         formatted_date = ""
@@ -110,34 +136,97 @@ class ResultView(ctk.CTkFrame):
         except Exception:
             formatted_date = str(date) if date else ""
 
-        if formatted_date:
+        # 著者情報の取得と整形
+        authors = getattr(paper, "authors", [])
+        author_text = ""
+        if authors:
+            # 最大2名まで表示、3名以上は「et al.」を追加
+            if len(authors) > 2:
+                author_text = ", ".join(authors[:2]) + " et al."
+            else:
+                author_text = ", ".join(authors)
+
+        # 日付と著者を結合（著者がいない場合は日付のみ）
+        if formatted_date and author_text:
+            meta_text = f"{formatted_date} || {author_text}"
+        elif formatted_date:
+            meta_text = formatted_date
+        elif author_text:
+            meta_text = author_text
+        else:
+            meta_text = ""
+
+        if meta_text:
             meta_label = ctk.CTkLabel(
-                item_frame,
-                text=formatted_date,
-                anchor="w"
+                info_frame,
+                text=meta_text,
+                anchor="w",
+                text_color="#008000"  # 緑
             )
-            # 右側に余白を追加
-            meta_label.pack(fill="x", padx=(2, 6))
+            # 右側に余白を追加（内部余白を少し広めに）
+            meta_label.pack(fill="x", padx=(12, 12))
 
         # アブストラクト（全文表示）
         abstract_label = ctk.CTkLabel(
-            item_frame,
+            info_frame,
             text=abstract,
             anchor="w",
             justify="left",
             # 初期値は小さくして、後続の<Configure>で動的に更新
             wraplength=100
         )
-        # 右側に余白を追加
-        abstract_label.pack(fill="x", padx=(2, 6))
+        # 右側に余白を追加（内部余白を少し広めに）
+        abstract_label.pack(fill="x", padx=(12, 12), pady=(2, 6))
 
         # フレームのサイズに合わせて折り返し幅を更新（スクロールバー幅分を差し引く）
-        def _update_wraplength(event=None, lbl=abstract_label, frame=item_frame):
+        def _update_wraplength(event=None, lbl_abstract=abstract_label, lbl_title=title_label, frame=info_frame):
             try:
                 w = frame.winfo_width()
                 if w and w > 0:
-                    lbl.configure(wraplength=max(w - 10, 120))
+                    # 右側のチェックボックス分と内部余白（左右 12px ずつ）を差し引く
+                    wl = max(w - (24 + 24), 160)
+                    lbl_abstract.configure(wraplength=wl)
+                    lbl_title.configure(wraplength=wl)
             except Exception:
                 pass
 
-        item_frame.bind("<Configure>", _update_wraplength)
+        info_frame.bind("<Configure>", _update_wraplength)
+
+        # 選択状態管理用の変数
+        var = ctk.BooleanVar(value=False)
+        self.save_notion_selected_vars[paper.id] = var
+
+        # チェックボックス
+        checkbox = ctk.CTkCheckBox(
+            notion_frame,
+            text="",
+            variable=var,
+            width=20,
+            height=20,
+        )
+        checkbox.pack(pady=10, padx=4)
+
+    def _create_notion_save_button(self):
+        """
+        Notion保存ボタンを作成する
+        ボタンを押すと、self.save_notion_selected_varsでチェックされた論文をNotionに保存する
+        """
+        self.notion_save_button = ctk.CTkButton(
+            self,
+            text="Notion DBに保存",
+            command=self._save_to_notion,
+        )
+        self.notion_save_button.pack(pady=10)
+
+    def _save_to_notion(self):
+        """ 選択されたPaperをcontrollerに渡してNotionに保存する"""
+        selected_papers = [
+            paper for paper in self.papers
+            if self.save_notion_selected_vars[paper.id].get()
+        ]
+
+        if not selected_papers:
+            return
+
+        # コントローラーに保存処理を依頼
+        self.controller.save_to_notion(selected_papers)

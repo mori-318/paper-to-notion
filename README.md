@@ -1,82 +1,54 @@
 # paper-to-notion
 
+| 検索画面 | 結果表示画面 |
+|:--------:|:------------:|
+| <img src="./imgs/search_view.png" width="300"> | <img src="./imgs/result_view.png" width="300"> |
+
+## 概要
 arXivからキーワード・日付範囲で論文を収集し、Notionに保存するツール。
 
-----
+## 開発背景
+私は、研究活動で、arXivをよく使用している。そして、調査した論文はNotionで管理していたが、毎回手動でNotionに論文情報を入力することに時間がかかっていた。そこで、このツールを作成した。
 
-## 1. 要件
-- キーワード：ユーザーがGUIから設定。保存チェックボックスを押すと、yamlファイルに保存し、次回起動時に自動的に読み込まれる。
-- 調査数：ユーザーがGUIから設定。デフォルトは5。スライドボタンとテキストボックスで設定。
-- 日付範囲：ユーザーがGUIから設定。デフォルトは過去１年間。
-- データソース：arXiv
-- 収集対象フィールド：タイトル、URL、著者、公開日、カテゴリ、abstract
-- 出力：GUIにタイトル、日時、abstractを表示。
-- abstractの翻訳：ローカルLM（Swallow MS）で日本語に翻訳。
-- Notionへの保存：左側のチェックボックスにチェックを入れた論文のみNotionに保存する。
-- NotionのDB：ユーザーがGUIから設定。もし存在しない場合は新規作成する。
 
-## 2. GUI構成
-- CustomTkinterを使用したGUI。
-- キーワード入力欄：テキストボックス。
-- 調査数：スライドボタンとテキストボックス。
-- 日付範囲
-- NotionのDB：テキストボックス or ドロップダウンメニュー。
-- 論文の表示：それぞれの論文のタイトル、日時、abstractを表示。左側にチェックボックスを配置。
-- 読み込み中：読み込み中の表示。
+## 主な機能
+- キーワード・日付範囲・調査数でarXivから論文を収集
+    - キーワード以外にも、URL、arXiv IDでも検索可能
+- キーワード保存機能
+- 論文abstructの翻訳・要約
+- 収集した論文を結果表示画面に表示
+- 結果表示画面で指定した論文をNotionに保存
 
-## 3. データモデル
-```python
-class Paper(BaseModel):
-    title: str
-    url: str
-    authors: List[str]
-    published_date: str
-    category: str
-    abstract: str
-    abstract_ja: str
+## 使用技術
+- 言語：Python3.11
+- GUI：CustomTkinter
+- arXiv：arXiv API
+- LLM：Google Gemini API
+- Notion：Notion API
+
+## セットアップ・実行手順（パッケージ管理ツール：uv）
+1. Google Gemini API Keyの取得・Notion API Keyの取得
+2. Notion Database IDの取得（使用するDBには、以下のプロパティを設定する）
+    - Progress
+        - プロパティタイプ：ステータス
+        - ステータスの値：未読・途中・読了
+    - Authors
+        - プロパティタイプ：テキスト
+    - Time
+        - プロパティタイプ：**テキスト**
+    - URL
+        - プロパティタイプ：URL
+3. .envファイルの作成・API Key・Notion Database IDの設定（.env.sampleを参照）
+4. uvでの依存環境構築
+```bash
+uv sync
 ```
-
-## 4. アーキテクチャ
-### MVCパターンに準拠
-- **Model**: `src/domain/models.py` データ構造定義
-- **View**: `src/app/ui/views/` 画面レイアウト
-- **Controller**: `src/app/controller.py` アプリケーションロジック
-
-## 5. フォルダ構成
-```
-paper-to-notion/
-├── experiments/
-│   └── arXiv_api.ipynb
-├── src/
-│   ├── app/                  # アプリケーション層
-│   │   ├── app_window.py     # メインウィンドウ管理
-│   │   ├── controller.py     # アプリケーションロジック
-│   │   └── ui/               # GUIコンポーネント層
-│   │       ├── components/   # 再利用可能コンポーネント
-│   │       └── views/        # 画面レイアウト
-│   │           ├── main_view.py
-│   │           ├── loading_view.py
-│   │           └── request_view.py
-│   ├── collectors/           # データ収集（ディレクトリ名は将来 "collectors" へ更名推奨）
-│   ├── config/
-│   ├── domain/               # ドメインモデル
-│   │   ├── __init__.py
-│   │   └── models.py
-│   ├── services/             # ビジネスロジック
-│   ├── sinks/
-│   ├── utils/                # 共通ユーティリティ
-│   └── main.py               # エントリポイント
-├── tests/
-│   ├── unit/
-│   └── integration/
-├── .gitignore
-├── .python-version
-├── README.md
-├── pyproject.toml            # 依存管理（uv/PEP 621）
-└── uv.lock
-```
-
-## 起動方法
-
+5. 実行
 ```bash
 uv run python src/main.py
+```
+
+## 今後の開発予定
+- LLMとの論文を参照したチャット機能追加
+- LLM APIの切り替え(現在はGeminiのみ)
+- ollamaを使ったローカルLLMのサポート

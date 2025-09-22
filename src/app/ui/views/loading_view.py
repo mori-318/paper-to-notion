@@ -1,5 +1,6 @@
 import customtkinter as ctk
 
+
 class LoadingView(ctk.CTkFrame):
     """
     論文調査中のビュー
@@ -27,3 +28,10 @@ class LoadingView(ctk.CTkFrame):
         if self.controller is None:
             self.cancel_button.configure(state="disabled")
         self.cancel_button.pack(pady=10)
+
+    def update_message(self, message: str):
+        """ローディングメッセージを更新"""
+        try:
+            self.loading_label.configure(text=message)
+        except Exception:
+            pass

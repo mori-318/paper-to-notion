@@ -1,8 +1,8 @@
 import customtkinter as ctk
 from app.ui.views.main_view import MainView
-from app.ui.views.loading_view import LoadingView
 from app.ui.views.request_view import RequestView
 from .controller import AppController
+
 
 class AppWindow(ctk.CTk):
     """
@@ -11,7 +11,7 @@ class AppWindow(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("論文調査ツール")
-        self.geometry("600x600")
+        self.geometry("600x700")
         self.resizable(False, False)
 
         # コントローラーの作成
