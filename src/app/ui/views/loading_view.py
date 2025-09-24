@@ -3,7 +3,9 @@ import customtkinter as ctk
 
 class LoadingView(ctk.CTkFrame):
     """
-    論文調査中のビュー
+    非同期処理（論文検索、Notion保存など）の実行中に表示するビュー。
+
+    プログレスバーとキャンセルボタンを持つ。
     """
     def __init__(self, master: ctk.CTkFrame, controller=None, **kwargs):
         super().__init__(master, **kwargs)
@@ -30,7 +32,7 @@ class LoadingView(ctk.CTkFrame):
         self.cancel_button.pack(pady=10)
 
     def update_message(self, message: str):
-        """ローディングメッセージを更新"""
+        """ローディングメッセージを更新する。"""
         try:
             self.loading_label.configure(text=message)
         except Exception:

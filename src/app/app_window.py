@@ -6,7 +6,9 @@ from .controller import AppController
 
 class AppWindow(ctk.CTk):
     """
-    アプリケーションウィンドウ
+    アプリケーションのメインウィンドウ。
+
+    UI全体のコンテナとして機能する。
     """
     def __init__(self):
         super().__init__()

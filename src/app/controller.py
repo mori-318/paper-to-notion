@@ -14,12 +14,13 @@ from app.ui.views.loading_view import LoadingView
 
 class AppController:
     """
-    アプリケーションの制御ロジックを管理するクラス
+    アプリケーションの制御ロジックを管理。
+
+    主な責務:
     - 画面遷移の制御
-    - リクエスト送信/キャンセル
-    - arXiv検索
-    - 翻訳
-    - Notion保存
+    - 検索リクエストの受付と実行
+    - 外部サービス（arXiv, 翻訳, Notion）との連携
+    - 非同期タスク（検索、保存）の管理
     """
     def __init__(self, window: ctk.CTk):
         # AppWindowのインスタンス (ルートウィンドウ)
@@ -40,14 +41,11 @@ class AppController:
         message: Optional[str] = None,
     ):
         """
-        指定ビューをメインコンテンツ領域に表示
-        viewには以下のいずれかを渡せる:
-            - CTkFrameのサブクラス (例：RequestView, LoadingView)
-            - 親フレームを引数に取り、フレームを返す関数
+        指定されたビューをメインコンテンツ領域に表示。
 
         Args:
-            view (Union[Type[ctk.CTkFrame], Callable[[ctk.CTkFrame], ctk.CTkFrame]]): 表示するビュー
-            message (Optional[str]): 表示するメッセージ
+            view: 表示するビュークラスまたはファクトリ関数。
+            message: ビューに渡すオプションのメッセージ。
         """
         content = getattr(self.window, "main_view").content_frame
 
@@ -78,10 +76,10 @@ class AppController:
 
     def submit_request(self, config: Optional[SearchConfig] = None):
         """
-        検索リクエストを受け付けるハンドラ
+        検索リクエストを受け付け、バックグラウンドで検索処理を開始。
 
         Args:
-            config (Optional[SearchConfig]): 検索設定
+            config: 検索設定。
         """
         self._is_cancelling = False
 
@@ -97,9 +95,12 @@ class AppController:
 
     def _run_search(self, config: SearchConfig):
         """
-        別スレッドで arXiv 検索を実行し、完了後に結果ビューを表示する。
+        arXivでの論文検索と翻訳を非同期で実行。
+
+        完了後、結果ビューを表示する。
+
         Args:
-            config (SearchConfig): 検索設定
+            config: 検索設定。
         """
         # サービス呼び出し
         try:
@@ -168,7 +169,7 @@ class AppController:
 
     def cancel_request(self):
         """
-        実行中の処理をキャンセルし、リクエスト入力画面へ戻す。
+        実行中の処理をキャンセルし、リクエスト入力画面に戻る。
         """
         from app.ui.views.request_view import RequestView  # 遅延インポートで循環参照回避
 
@@ -178,9 +179,10 @@ class AppController:
 
     def save_to_notion(self, papers: List[Paper]):
         """
-        Notionに論文を保存する
+        指定された論文をNotionに保存。
+
         Args:
-            papers (List[Paper]): 保存する論文オブジェクトのリスト
+            papers: 保存対象の論文リスト。
         """
         if not papers:
             self._show_error("保存する論文がありません")
@@ -198,9 +200,10 @@ class AppController:
 
     def _save_to_notion_thread(self, papers: List[Paper]):
         """
-        バックグラウンドで論文をNotionに保存する
+        論文のNotionへの保存処理を非同期で実行。
+
         Args:
-            papers (List[Paper]): 保存する論文オブジェクトのリスト
+            papers: 保存対象の論文リスト。
         """
         try:
             # NotionService の遅延初期化
@@ -237,7 +240,7 @@ class AppController:
             self.window.after(0, _finish)
 
     def _show_error(self, message: str):
-        """簡易的なエラービューを表示"""
+        """簡易的なエラービューを表示。"""
         def error_view(parent: ctk.CTkFrame) -> ctk.CTkFrame:
             frame = ctk.CTkFrame(parent)
             ctk.CTkLabel(frame, text=message).pack(pady=20)

@@ -6,11 +6,10 @@ from datetime import datetime
 
 class ResultView(ctk.CTkFrame):
     """
-    検索結果を表示するビュー
-    Args:
-        master (ctk.CTkFrame): 親フレーム
-        controller: 画面遷移用コントローラ（戻るボタン等で使用）
-        papers (List[object]): 検索結果の論文リスト
+    検索結果の論文リストを表示するビュー。
+
+    各論文の詳細（タイトル、著者、日付、要旨）を表示し、
+    Notionに保存する論文を選択する機能を提供する。
     """
     def __init__(self, master: ctk.CTkFrame, controller=None, papers: List[Any] | None = None, **kwargs):
         super().__init__(master, **kwargs)
@@ -26,7 +25,7 @@ class ResultView(ctk.CTkFrame):
         self._create_notion_save_button()
 
     def _create_header(self):
-        """ヘッダー部分を作成"""
+        """ヘッダー部分（タイトルと戻るボタン）を作成する。"""
         self.header_frame = ctk.CTkFrame(self)
         self.header_frame.pack(fill="x", padx=10, pady=10)
 
@@ -50,7 +49,7 @@ class ResultView(ctk.CTkFrame):
             self.back_button.pack(side="right")
 
     def _create_result_list(self):
-        """結果リスト部分を作成"""
+        """結果リスト部分を作成する。"""
         self.list_frame = ctk.CTkScrollableFrame(self, height=400)
         self.list_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
@@ -66,7 +65,7 @@ class ResultView(ctk.CTkFrame):
             self._create_paper_item(paper)
 
     def _create_paper_item(self, paper):
-        """個々の論文アイテムを作成"""
+        """個々の論文情報を表示するアイテムを作成する。"""
         item_frame = ctk.CTkFrame(self.list_frame)
         # 右側に余白を広めに取り、スクロールバーとの重なりを回避
         item_frame.pack(fill="x", padx=(5, 18), pady=6)
@@ -208,8 +207,9 @@ class ResultView(ctk.CTkFrame):
 
     def _create_notion_save_button(self):
         """
-        Notion保存ボタンを作成する
-        ボタンを押すと、self.save_notion_selected_varsでチェックされた論文をNotionに保存する
+        Notion保存ボタンを作成する。
+
+        ボタン押下時、選択された論文の保存処理をコントローラーに依頼する。
         """
         self.notion_save_button = ctk.CTkButton(
             self,
@@ -219,7 +219,7 @@ class ResultView(ctk.CTkFrame):
         self.notion_save_button.pack(pady=10)
 
     def _save_to_notion(self):
-        """ 選択されたPaperをcontrollerに渡してNotionに保存する"""
+        """選択された論文をコントローラーに渡し、Notionへの保存を依頼する。"""
         selected_papers = [
             paper for paper in self.papers
             if self.save_notion_selected_vars[paper.id].get()

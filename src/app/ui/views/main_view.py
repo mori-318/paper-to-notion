@@ -2,6 +2,11 @@ import customtkinter as ctk
 
 
 class MainView(ctk.CTkFrame):
+    """
+    アプリケーションのメインビュー。
+
+    タイトルラベルと、各画面を表示するためのコンテンツフレームを持つ。
+    """
     def __init__(self, master: ctk.CTkFrame, **kwargs):
         super().__init__(master, **kwargs)
 

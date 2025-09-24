@@ -8,7 +8,9 @@ from tkcalendar import DateEntry
 
 class RequestView(ctk.CTkFrame):
     """
-    論文調査条件を入力するフォームビュー
+    論文の調査条件を入力するフォームビュー。
+
+    キーワード、調査数、日付範囲などの設定項目を提供する。
     """
     def __init__(self, master: ctk.CTkFrame, controller):
         super().__init__(master)
@@ -148,14 +150,14 @@ class RequestView(ctk.CTkFrame):
 
     def _update_max_results_entry(self, value):
         """
-        スライダーの値をテキストボックスに反映
+        スライダーの値をテキストボックスに反映する。
         """
         self.max_results_entry.delete(0, "end")
         self.max_results_entry.insert(0, str(int(value)))
 
     def _update_max_results_slider(self, event):
         """
-        テキストボックスでEnterが押されたときにスライダーを更新
+        テキストボックスでEnterキーが押された際にスライダーを更新する。
         """
         try:
             value = int(self.max_results_entry.get())
@@ -165,11 +167,11 @@ class RequestView(ctk.CTkFrame):
             pass
 
     def _ensure_store_dir(self):
-        """保存先ディレクトリを確保"""
+        """保存先ディレクトリを確保する。"""
         os.makedirs(os.path.dirname(self._store_path), exist_ok=True)
 
     def _load_saved_keywords(self) -> list[str]:
-        """保存済みキーワードを読み込む"""
+        """保存済みのキーワードをファイルから読み込む。"""
         try:
             if not os.path.exists(self._store_path):
                 return []
@@ -182,9 +184,10 @@ class RequestView(ctk.CTkFrame):
 
     def _save_keyword(self, kw: str):
         """
-        キーワードを保存（重複は先頭に移動、最大10件）
+        キーワードを保存する（重複は先頭に移動、最大10件）。
+
         Args:
-            kw(str): 保存するキーワード
+            kw: 保存するキーワード。
         """
         kw = (kw or "").strip()
         if not kw:
@@ -206,7 +209,7 @@ class RequestView(ctk.CTkFrame):
             pass
 
     def _update_saved_keywords_menu(self):
-        """保存済みキーワードの選択UIを更新"""
+        """保存済みキーワードの選択UIを更新する。"""
         values = self._saved_keywords if self._saved_keywords else ["(なし)"]
         self.saved_menu.configure(values=values)
         if self._saved_keywords:
@@ -216,9 +219,10 @@ class RequestView(ctk.CTkFrame):
 
     def _on_select_saved(self, choice: str):
         """
-        保存済みキーワードを選択したときにキーワード入力欄を更新
+        保存済みキーワードが選択された際に、キーワード入力欄を更新する。
+
         Args:
-            choice(str): 選択されたキーワード
+            choice: 選択されたキーワード。
         """
         if choice and choice != "(なし)":
             self.keyword_entry.delete(0, "end")
@@ -226,7 +230,7 @@ class RequestView(ctk.CTkFrame):
 
     def submit_request(self):
         """
-        リクエストを送信
+        入力された検索条件でリクエストを送信する。
         """
         # 無期限チェックの状態に応じて処理
         start_infinite = self.start_infinite_var.get()
@@ -267,7 +271,7 @@ class RequestView(ctk.CTkFrame):
         self.controller.submit_request(config)
 
     def _on_toggle_start_infinite(self):
-        """開始日 無期限のON/OFFでDateEntryを有効/無効化"""
+        """開始日の「無期限」チェックボックスに応じて、日付入力ウィジェットを有効/無効化する。"""
         try:
             if self.start_infinite_var.get():
                 self.start_date_entry.configure(state="disabled")
@@ -277,7 +281,7 @@ class RequestView(ctk.CTkFrame):
             pass
 
     def _on_toggle_end_infinite(self):
-        """終了日 無期限のON/OFFでDateEntryを有効/無効化"""
+        """終了日の「無期限」チェックボックスに応じて、日付入力ウィジェットを有効/無効化する。"""
         try:
             if self.end_infinite_var.get():
                 self.end_date_entry.configure(state="disabled")
@@ -288,13 +292,12 @@ class RequestView(ctk.CTkFrame):
 
     def _text_to_relative_jp(self, s: str) -> str | None:
         """
-        ユーザー入力文字列を相対表現（X年Y月Z日前）に変換して返す。
-        サポート:
-        - 絶対日付: YYYY-MM-DD / YYYY/MM/DD / YYYY.MM.DD
-        - 相対表現: 「X年Y月Z日前」または「X年前」「Yヶ月前」「Z日前」等の部分指定
-        - キーワード: 今日 / yesterday(昨日) / today
-        - 簡易相対: -30d, -1m, -1y
-        変換できない場合は None を返す。
+        ユーザー入力の日付文字列を相対的な日付表現（例: "X年Y月Z日前"）に変換。
+
+        絶対日付、相対表現（"1年前"など）、キーワード（"今日"など）をサポートする。
+
+        Returns:
+            変換後の相対日付文字列。変換不可の場合はNone。
         """
         import re
         s = (s or "").strip()
@@ -343,7 +346,7 @@ class RequestView(ctk.CTkFrame):
         return None
 
     def _to_relative_jp(self, target: date) -> str:
-        """絶対日付を「X年Y月Z日前」に変換（365日=1年, 30日=1ヶ月の簡易換算）"""
+        """絶対日付を「X年Y月Z日前」形式の相対表現に変換する（簡易換算）。"""
         today = date.today()
         delta_days = (today - target).days
         if delta_days < 0:
